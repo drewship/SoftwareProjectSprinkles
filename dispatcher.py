@@ -50,140 +50,20 @@ class Dispatcher( object ):
 
     def fulflillRequest( self , method , query , body , path_list ):
         try:
-            if path_list[0] == 'Trending':
-                path_list.remove(path_list[0])
-                return self.trendingDispatch( method , query  , body , path_list )
-
-            elif path_list[0] == 'User':
-                path_list.remove(path_list[0])
-                return self.userDispatch( method , query , path_list )
-
-            elif path_list[0] == 'Discover':
-                path_list.remove(path_list[0])
-                return self.discoverDispatch( method , query  , body , path_list)
+            # if path_list[0] == 'Trending':
+            #     path_list.remove(path_list[0])
+            #     return self.trendingDispatch( method , query  , body , path_list )
+            #
+            # elif path_list[0] == 'User':
+            #     path_list.remove(path_list[0])
+            #     return self.userDispatch( method , query , path_list )
+            #
+            # elif path_list[0] == 'Discover':
+            #     path_list.remove(path_list[0])
+            #     return self.discoverDispatch( method , query  , body , path_list)
 
         except badPathException:
             return {'Status_code': "400" , 'Reason':"Invalid Path"}
-        except badParameterException:
-            return {'Status_code': "400" , 'Reason':"Invalid Parameters"}
-        except userNameException:
-            return {'Status_code': "404" , 'Reason':"Cannot Find User"}
-        except videoCannotBeUsedException:
-            return {'Status_code': "204" ,
-                    'Reason':"For some reason we could not use that audio"}
-        except notInAudioLibraryException:
-            return {'Status_code': "204" ,
-                    'Reason':"Audio did not match in library"}
-        except notValidRedditIdentifierException:
-            return {'Status_code': "400" , 'Reason':"Not a valid reddit link/ID"}
-        except noVideoException:
-            return {'Status_code': "400" ,
-                    'Reason':"Reddit link/ID did not have a youtube link"}
 
-        return {'Status_code' : "400" , 'Reason' : "Invalid Path"}
-
-    def userDispatch( self, method , query , path_list ):
-
-        return_dict = {}
-        if method == 'GET':
-            if len(path_list) == 0 and 'username' in query:
-                return_dict = self.database.getUserInfo( query[ 'username' ] )
-                print(return_dict)
-                return_dict[ 'Reason' ] = "OK"
-                return_dict[ 'Status_code' ] = "200"
-                return return_dict
-
-            elif path_list[ 0 ] == 'Songs' and path_list[ 0 ] == path_list[ -1 ]\
-            and 'username' in query:
-
-                if 'limit' in query:
-                    return_dict = self.database.getSongs( query[ 'username'][0] , limit=query[ 'limit' ][0])
-                    return_dict[ 'Status_code' ] = "200"
-                    return_dict[ 'Reason' ] = "OK"
-                    return return_dict
-                else:
-                    return_dict = self.database.getSongs( query[ 'username'][ 0 ] )
-                    return_dict[ 'Status_code' ] = "200"
-                    return_dict[ 'Reason' ] = "OK"
-                    return return_dict
-            elif path_list[ 0 ] == 'Songs' and path_list[ -1 ] == 'Ordered' and \
-            'username' in query and 'order_by' in query and 'direction' in query:
-                if 'limit' in query:
-                    return_dict = self.database.getSongsOrdered( query[ 'username'][ 0 ],
-                                                                 query['order_by'][ 0 ],
-                                                                 query['direction'][ 0 ],
-                                                                limit=query[ 'limit' ][ 0 ])
-                    return_dict[ 'Status_code' ] = "200"
-                    return_dict[ 'Reason' ] = "OK"
-                    return return_dict
-                else:
-                    return_dict = self.database.getSongsOrdered( query[ 'username'][ 0 ],
-                                                                 query['order_by'][ 0 ],
-                                                                 query['direction'][ 0 ])
-                    return_dict[ 'Status_code' ] = "200"
-                    return_dict[ 'Reason' ] = "OK"
-                    return return_dict
-
-        raise badPathException
-
-    def trendingDispatch( self , method , query  , body , path_list ):
-
-        if method == 'GET':
-            if len( path_list ) == 0:
-                if 'limit' in query:
-                    return_dict = self.database.getTrending(limit=query[ 'limit' ])
-                    return_dict[ 'Status_code' ] = "200"
-                    return_dict[ 'Reason' ] = "OK"
-                    return return_dict
-                else:
-                    return_dict = self.database.getTrending()
-                    return_dict[ 'Status_code' ] = "200"
-                    return_dict[ 'Reason' ] = "OK"
-                    return return_dict
-
-        raise badPathException
-
-    def discoverDispatch( self , method , query  , body , path_list ):
-
-        username = None
-        if 'username' in body:
-            username = body[ 'username' ]
-
-        if method == 'POST':
-            if path_list[ 0 ] == 'Post_ID' and path_list[ 0 ] == path_list[ -1 ] and 'Post_ID' in body:
-                link = self.redditSide.getAudioByID( body['Post_ID'] )
-                if self.database.checkLink( link , username ):
-                    return_dict = self.database.getSong( link )
-                else:
-                    if 'start_time' in body and 'end_time' in body:
-                        filename = self.redditSide.download_song( link , start=body['start_time'] , end=body['end_time'])
-                    else:
-                        filename = self.redditSide.download_song( link )
-                    return_dict = self.audioSide.getSongInfo( filename )
-                    return_dict[ 'link' ] = link
-                    self.database.addSong( return_dict , username )
-                    return_dict = self.database.getSong( link )
-
-                return_dict[ 'Status_code' ] = "200"
-                return_dict[ 'Reason' ] = "OK"
-                return return_dict
-
-            elif path_list[ 0 ] == 'link' and path_list[ 0 ] == path_list[ -1 ] and 'link' in body:
-                link = self.redditSide.getAudioByLink( body['link'] )
-                if self.database.checkLink( link , username ):
-                    return_dict = self.database.getSong( link )
-                else:
-                    if 'start_time' in body and 'end_time' in body:
-                        filename = self.redditSide.download_song( link , start=body['start_time'] , end=body['end_time'])
-                    else:
-                        filename = self.redditSide.download_song( link )
-                    return_dict = self.audioSide.getSongInfo( filename )
-                    return_dict[ 'link' ] = link
-                    self.database.addSong( return_dict , username )
-                    return_dict = self.database.getSong( link )
-
-                return_dict[ 'Status_code' ] = "200"
-                return_dict[ 'Reason' ] = "OK"
-                return return_dict
 
         raise badPathException
